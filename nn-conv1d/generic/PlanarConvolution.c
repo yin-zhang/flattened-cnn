@@ -51,8 +51,8 @@ static int nnconv1d_(PlanarConvolution_updateOutput)(lua_State *L)
       }
 
       // 2d planar convolution
-      for (i = 0; i < nInputPlane; i++) {
-         for (j = 0; j < inputHeight; j++) {
+      for (i = 0; i < nOutputPlane; i++) {
+         for (j = 0; j < outputHeight; j++) {
             for (h = 0; h < kH; h++) {
                for (k = 0; k < kW; k++) {
                   THVector_(add)(output_t->storage->data + output_t->storageOffset +
@@ -200,7 +200,7 @@ static int nnconv1d_(PlanarConvolution_accGradParameters)(lua_State *L)
 
       // dot products
       int i, j, h, k;
-      for (i = 0; i < nInputPlane; i++) {
+      for (i = 0; i < nOutputPlane; i++) {
          for (h = 0; h < kH; h++) {
             for (k = 0; k < kW; k++) {
                for (j = 0; j < outputHeight; j++) {
