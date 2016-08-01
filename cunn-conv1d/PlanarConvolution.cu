@@ -76,7 +76,7 @@ __global__ void conv_planar_naive_gradInput(const int n, float *dx,
       dx[i] = 0.0f;
       for (int h = h_begin; h < h_end; h++) {
          for (int k = k_begin; k < k_end; k++) {
-            dx[i] += w[w_offset + h*kW + k]*dy[dy_offset - h*oW - k];
+            dx[i] += w[w_offset + h*kW + k]*dy[dy_offset - h*iW - k];
          }
       }
    }
