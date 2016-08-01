@@ -51,12 +51,12 @@ static int nnconv1d_(PlanarConvolution_updateOutput)(lua_State *L)
       }
 
       // 2d planar convolution
-      for (i = 0; i < nOutputPlane; i++) {
+      for (i = 0; i < nInputPlane; i++) {
          for (j = 0; j < outputHeight; j++) {
             for (h = 0; h < kH; h++) {
                for (k = 0; k < kW; k++) {
                   THVector_(add)(output_t->storage->data + output_t->storageOffset +
-                                 output_t->stride[0]*i + output_t->stride[1]*(j+h),
+                                 output_t->stride[0]*i + output_t->stride[1]*j,
                                  input_t->storage->data + input_t->storageOffset +
                                  input_t->stride[0]*i + input_t->stride[1]*(j+h) + k,
                                  *(THTensor_(data)(weight)+i*kW*kH+h*kW+k), outputWidth);
@@ -130,7 +130,7 @@ static int nnconv1d_(PlanarConvolution_updateGradInput)(lua_State *L)
                   THVector_(add)(gradInput_t->storage->data + gradInput_t->storageOffset +
                                  gradInput_t->stride[0]*i + gradInput_t->stride[1]*(j+h) + k,
                                  gradOutput_t->storage->data + gradOutput_t->storageOffset +
-                                 gradOutput_t->stride[0]*i + gradOutput_t->stride[1]*(j+h),
+                                 gradOutput_t->stride[0]*i + gradOutput_t->stride[1]*j,
                                  *(THTensor_(data)(weight)+i*kW*kH+h*kW+k), outputWidth);   // needs to change
                }
             }
@@ -208,7 +208,7 @@ static int nnconv1d_(PlanarConvolution_accGradParameters)(lua_State *L)
                      scale*THBlas_(dot)
                       (outputWidth,
                        gradOutput_t->storage->data + gradOutput_t->storageOffset +
-                       i*gradOutput_t->stride[0] + (j+h)*gradOutput_t->stride[1],
+                       i*gradOutput_t->stride[0] + j*gradOutput_t->stride[1],
                        gradOutput_t->stride[2],
                        input_t->storage->data + input_t->storageOffset +
                        i*input_t->stride[0] + (j+h)*input_t->stride[1] + k,
