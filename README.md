@@ -33,7 +33,7 @@ This is a list of available modules.
 nn.LateralConvolution(nInputPlane, nOutputPlane)        -- 1d conv over feature
 nn.HorizontalConvolution(nInputPlane, nOutputPlane, kL) -- 1d conv in horizontal
 nn.VerticalConvolution(nInputPlane, nOutputPlane, kL)   -- 1d conv in vertical
-nn.PlanarConvolution(nInputPlane, nOutputPlane, kL)   -- 2d conv within feature
+nn.PlanarConvolution(nInputPlane, nOutputPlane, kW, kH)   -- 2d conv within feature
 ```
 
 
