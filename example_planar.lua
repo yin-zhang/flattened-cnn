@@ -33,11 +33,11 @@ end
 
 -- set parameters
 local batch = 3
-local nInputPlanes = 4
-local nOutputPlanes = 5
+local nInputPlanes = 12
+local nOutputPlanes = 8
 local iH = 5
-local iW = 5
-local kW = 3
+local iW = 6
+local kW = 4
 local kH = 3
 local use_cuda = false
 
@@ -66,8 +66,8 @@ model_mid:add(nn.PlanarConvolution(nOutputPlanes, nOutputPlanes, kW, kH))
 
 local model_low = nn.Sequential()
 model_low:add(nn.LateralConvolution(nInputPlanes, nOutputPlanes))
-model_low:add(nn.VerticalConvolution(nOutputPlanes, nOutputPlanes, kH))
-model_low:add(nn.HorizontalConvolution(nOutputPlanes, nOutputPlanes, kW))
+model_low:add(nn.PlanarConvolution(nOutputPlanes, nOutputPlanes, 1, kH))
+model_low:add(nn.PlanarConvolution(nOutputPlanes, nOutputPlanes, kW, 1))
 
 -- overwrite parameters
 model_full.modules[1].weight:copy(zyx)
