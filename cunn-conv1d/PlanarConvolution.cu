@@ -30,51 +30,74 @@ __global__ void im2col_kernel_h(const int n, const float* data_im,
 }
 
 
-__global__ void conv_horizontal_naive_output(const int n, float *y,
+__global__ void conv_planar_naive_output(const int n, float *y,
                                              const float *x, const float *w,
-                                             const int iH, const int iW, const int kL)
+                                             const int iH, const int iW,
+                                             const int kH, const int kW)
 {
    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < n; i += blockDim.x*gridDim.x) {
-      int oW = iW - kL + 1;
+      int oW = iW - kW + 1;
+      int oH = iH - kH + 1;
+      
       int x_offset = (i/oW)*iW + i%oW;
-      int w_offset = (i/(oW*iH))*kL;
+      int w_offset = (i/(oW*oH))*kH*kW;
 
-      for (int k = 0; k < kL; k++) {
-         y[i] += w[w_offset + k]*x[x_offset + k];
+      for (int h = 0; h < kH; h++) {
+         for (int k = 0; k < kW; k++) {
+            y[i] += w[w_offset + h*kW + k]*x[x_offset + h*iW + k];
+         }
       }
    }
 }
 
 
-__global__ void conv_horizontal_naive_gradInput(const int n, float *dx,
+__global__ void conv_planar_naive_gradInput(const int n, float *dx,
                                                 const float *dy, const float *w,
-                                                const int oH, const int oW, const int kL)
+                                                const int oH, const int oW,
+                                                const int kH, const int kW)
 {
    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < n; i += blockDim.x*gridDim.x) {
-      int iW = oW + kL - 1;
+      int iW = oW + kW - 1;
+      int iH = oH + kH - 1;
+
+      int iC = i/(iH*iW);
+      int row = (i%(iH*iW))/iW;
       int col = i%iW;
-      int dy_offset = (i/iW)*oW + i%iW;
-      int w_offset = (i/(iW*oH))*kL;
+
+      int dy_offset = iC*oH*oW + row*oW + col;
+      int w_offset = iC*kH*kW;
 
       int k_begin = max(0, col-oW+1);
-      int k_end = min(kL, col+1);
+      int k_end = min(kW, col+1);
 
+      int h_begin = max(0, row-oH+1);
+      int h_end = min(kH, row+1);
+      
       dx[i] = 0.0f;
-      for (int k = k_begin; k < k_end; k++) {
-         dx[i] += w[w_offset + k]*dy[dy_offset - k];
+      for (int h = h_begin; h < h_end; h++) {
+         for (int k = k_begin; k < k_end; k++) {
+            dx[i] += w[w_offset + h*kW + k]*dy[dy_offset - h*oW - k];
+         }
       }
    }
 }
 
 
-__global__ void conv_horizontal_naive_gradParam(const int n, float *dw,
+__global__ void conv_planar_naive_gradParam(const int n, float *dw,
                                                 const float *x, const float *dy,
-                                                const int kL, const int oH, const int oW)
+                                                const int kH, const int kW,
+                                                const int oH, const int oW)
 {
    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < n; i += blockDim.x*gridDim.x) {
-      int iW = oW + kL - 1;
-      int dy_offset = (i/kL)*oH*oW;
-      int x_offset = (i/kL)*oH*oW + i%kL;
+      int iW = oW + kW - 1;
+      int iH = oH + kH - 1;
+      
+      int iC = i/(kH*kW);
+      int row = (i%(kH*kW))/kW;
+      int col = i%kW;
+
+      int dy_offset = iC*oH*oW;
+      int x_offset = iC*oH*oW + row*oW + col;
 
       for (int j = 0; j < oH; j++) {
          for (int k = 0; k < oW; k++) {
@@ -85,17 +108,17 @@ __global__ void conv_horizontal_naive_gradParam(const int n, float *dw,
 }
 
 
-__global__ void conv_horizontal_naive_gradWeight(const int n, float *y,
-                                                 const float *x, const int kL,
+__global__ void conv_planar_naive_gradWeight(const int n, float *y,
+                                                 const float *x, const int kH, const int kW,
                                                  const int iC)
 {
    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < n; i += blockDim.x*gridDim.x) {
-      y[i] = x[(i/kL)*kL*iC + i];
+      y[i] = x[(i/(kH*kW))*kH*kW*iC + i];
    }
 }
 
 
-static int cunnconv1d_HorizontalConvolution_updateOutput(lua_State *L) {
+static int cunnconv1d_PlanarConvolution_updateOutput(lua_State *L) {
    THCState *state = getCutorchState(L);
    THCudaTensor *input = (THCudaTensor*)luaT_checkudata(L, 2, "torch.CudaTensor");
 
@@ -131,8 +154,8 @@ static int cunnconv1d_HorizontalConvolution_updateOutput(lua_State *L) {
    long batchSize    = input->size[0];
    long inputHeight  = input->size[2];
    long inputWidth   = input->size[3];
-   long outputHeight = inputHeight;
-   long outputWidth  = inputWidth - weight->size[1] + 1;
+   long outputHeight = inputHeight - weight->size[1] + 1;
+   long outputWidth  = inputWidth - weight->size[2] + 1;
 
    THCudaTensor_resize4d(state, output, batchSize, nOutputPlane, outputHeight, outputWidth);
 
@@ -163,12 +186,13 @@ static int cunnconv1d_HorizontalConvolution_updateOutput(lua_State *L) {
 
       // convolve
       long num_threads = nOutputPlane*outputHeight*outputWidth;
-      conv_horizontal_naive_output <<<GET_BLOCKS(num_threads), CUDA_NUM_THREADS>>>
+      conv_planar_naive_output <<<GET_BLOCKS(num_threads), CUDA_NUM_THREADS>>>
          (num_threads,
           THCudaTensor_data(state, output_n),
           THCudaTensor_data(state, input_n),
           THCudaTensor_data(state, weight),
-          inputHeight, inputWidth, weight->size[1]);
+          inputHeight, inputWidth,
+          weight->size[1], weight->size[2]);
    }
 
    THCudaTensor_free(state, input_n);
@@ -184,7 +208,7 @@ static int cunnconv1d_HorizontalConvolution_updateOutput(lua_State *L) {
 }
 
 
-static int cunnconv1d_HorizontalConvolution_updateGradInput(lua_State *L) {
+static int cunnconv1d_PlanarConvolution_updateGradInput(lua_State *L) {
    THCState *state = getCutorchState(L);
    THCudaTensor *input = (THCudaTensor *)luaT_checkudata(L, 2, "torch.CudaTensor");
    THCudaTensor *gradOutput = (THCudaTensor *)luaT_checkudata(L, 3, "torch.CudaTensor");
@@ -217,8 +241,8 @@ static int cunnconv1d_HorizontalConvolution_updateGradInput(lua_State *L) {
    long batchSize    = input->size[0];
    long inputHeight  = input->size[2];
    long inputWidth   = input->size[3];
-   long outputHeight = inputHeight;
-   long outputWidth  = inputWidth - weight->size[1] + 1;
+   long outputHeight = inputHeight - weight->size[1] + 1;
+   long outputWidth  = inputWidth - weight->size[2] + 1;
 
    THCudaTensor_resize4d(state, gradInput, batchSize, nInputPlane, inputHeight, inputWidth);
 
@@ -233,12 +257,13 @@ static int cunnconv1d_HorizontalConvolution_updateGradInput(lua_State *L) {
 
       // convolve
       long num_threads = nInputPlane*inputHeight*inputWidth;
-      conv_horizontal_naive_gradInput <<<GET_BLOCKS(num_threads), CUDA_NUM_THREADS>>>
+      conv_planar_naive_gradInput <<<GET_BLOCKS(num_threads), CUDA_NUM_THREADS>>>
          (num_threads,
           THCudaTensor_data(state, gradInput_n),
           THCudaTensor_data(state, gradOutput_n),
           THCudaTensor_data(state, weight),
-          outputHeight, outputWidth, weight->size[1]);
+          outputHeight, outputWidth,
+          weight->size[1], weight->size[2]);
    }
 
    THCudaTensor_free(state, gradInput_n);
@@ -255,7 +280,7 @@ static int cunnconv1d_HorizontalConvolution_updateGradInput(lua_State *L) {
 }
 
 
-static int cunnconv1d_HorizontalConvolution_accGradParameters(lua_State *L) {
+static int cunnconv1d_PlanarConvolution_accGradParameters(lua_State *L) {
    THCState *state = getCutorchState(L);
    THCudaTensor *input = (THCudaTensor *)luaT_checkudata(L, 2, "torch.CudaTensor");
    THCudaTensor *gradOutput = (THCudaTensor *)luaT_checkudata(L, 3, "torch.CudaTensor");
@@ -263,7 +288,8 @@ static int cunnconv1d_HorizontalConvolution_accGradParameters(lua_State *L) {
    float scale = luaL_optnumber(L, 4, 1);
    int nInputPlane = luaT_getfieldcheckint(L, 1, "nInputPlane");
    int nOutputPlane = luaT_getfieldcheckint(L, 1, "nOutputPlane");
-   int kL = luaT_getfieldcheckint(L, 1, "kL");
+   int kH = luaT_getfieldcheckint(L, 1, "kH");
+   int kW = luaT_getfieldcheckint(L, 1, "kW");
 
    THCudaTensor *gradWeight = (THCudaTensor *)luaT_getfieldcheckudata(L, 1, "gradWeight", "torch.CudaTensor");
    THCudaTensor *gradBias = (THCudaTensor *)luaT_getfieldcheckudata(L, 1, "gradBias", "torch.CudaTensor");
@@ -292,16 +318,16 @@ static int cunnconv1d_HorizontalConvolution_accGradParameters(lua_State *L) {
    long batchSize    = input->size[0];
    long inputHeight  = input->size[2];
    long inputWidth   = input->size[3];
-   long outputHeight = inputHeight;
-   long outputWidth  = inputWidth - kL + 1;
+   long outputHeight = inputHeight - kH + 1;
+   long outputWidth  = inputWidth - kW + 1;
 
    if (ones->nDimension != 2 || ones->size[0]*ones->size[1] < outputHeight*outputWidth) {
       THCudaTensor_resize2d(state, ones, outputHeight, outputWidth);
       THCudaTensor_fill(state, ones, 1);
    }
 
-   THCudaTensor_resize2d(state, finput, kL*nInputPlane, outputHeight*outputWidth);
-   THCudaTensor_resize2d(state, fgradWeight, nOutputPlane, kL*nInputPlane);
+   THCudaTensor_resize2d(state, finput, kH*kW*nInputPlane, outputHeight*outputWidth);
+   THCudaTensor_resize2d(state, fgradWeight, nOutputPlane, kH*kW*nInputPlane);
 
    THCudaTensor *input_n = THCudaTensor_new(state);
    THCudaTensor *gradOutput_n = THCudaTensor_new(state);
@@ -317,7 +343,7 @@ static int cunnconv1d_HorizontalConvolution_accGradParameters(lua_State *L) {
       im2col_kernel_h <<<GET_BLOCKS(num_threads), CUDA_NUM_THREADS>>> (
          num_threads,
          THCudaTensor_data(state, input_n),
-         inputHeight, inputWidth, 1, kL, 0, 0, 1, 1,
+         inputHeight, inputWidth, kH, kW, 0, 0, 1, 1,
          outputHeight, outputWidth,
          THCudaTensor_data(state, finput)
       );
@@ -325,12 +351,12 @@ static int cunnconv1d_HorizontalConvolution_accGradParameters(lua_State *L) {
       // convolve
       THCudaBlas_gemm(
          state, 't', 'n',
-         kL*nInputPlane, nOutputPlane, outputHeight*outputWidth,
+         kH*kW*nInputPlane, nOutputPlane, outputHeight*outputWidth,
          scale,
          THCudaTensor_data(state, finput), outputHeight*outputWidth,
          THCudaTensor_data(state, gradOutput_n), outputHeight*outputWidth,
          (elt > 0),
-         THCudaTensor_data(state, fgradWeight), kL*nInputPlane
+         THCudaTensor_data(state, fgradWeight), kH*kW*nInputPlane
       );
 
       // fill biases
@@ -347,12 +373,12 @@ static int cunnconv1d_HorizontalConvolution_accGradParameters(lua_State *L) {
    }
 
    // extract gradWeight
-   long num_threads_ = kL*nInputPlane;
-   conv_horizontal_naive_gradWeight <<<GET_BLOCKS(num_threads_), CUDA_NUM_THREADS>>> (
+   long num_threads_ = kH*kW*nInputPlane;
+   conv_planar_naive_gradWeight <<<GET_BLOCKS(num_threads_), CUDA_NUM_THREADS>>> (
       num_threads_,
       THCudaTensor_data(state, gradWeight),
       THCudaTensor_data(state, fgradWeight),
-      kL, nInputPlane
+      kH, kW, nInputPlane
    );
 
    THCudaTensor_free(state, input_n);
@@ -367,17 +393,17 @@ static int cunnconv1d_HorizontalConvolution_accGradParameters(lua_State *L) {
 }
 
 
-static const struct luaL_Reg cunnconv1d_HorizontalConvolution__ [] = {
-   {"HorizontalConvolution_updateOutput", cunnconv1d_HorizontalConvolution_updateOutput},
-   {"HorizontalConvolution_updateGradInput", cunnconv1d_HorizontalConvolution_updateGradInput},
-   {"HorizontalConvolution_accGradParameters", cunnconv1d_HorizontalConvolution_accGradParameters},
+static const struct luaL_Reg cunnconv1d_PlanarConvolution__ [] = {
+   {"PlanarConvolution_updateOutput", cunnconv1d_PlanarConvolution_updateOutput},
+   {"PlanarConvolution_updateGradInput", cunnconv1d_PlanarConvolution_updateGradInput},
+   {"PlanarConvolution_accGradParameters", cunnconv1d_PlanarConvolution_accGradParameters},
    {NULL, NULL}
 };
 
 
-void cunnconv1d_HorizontalConvolution_init(lua_State *L)
+void cunnconv1d_PlanarConvolution_init(lua_State *L)
 {
    luaT_pushmetatable(L, "torch.CudaTensor");
-   luaT_registeratname(L, cunnconv1d_HorizontalConvolution__, "nn");
+   luaT_registeratname(L, cunnconv1d_PlanarConvolution__, "nn");
    lua_pop(L,1);
 }

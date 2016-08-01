@@ -7,12 +7,12 @@ function PlanarConvolution:__init(nInputPlane, nOutputPlane, kW, kH)
    self.nInputPlane = nInputPlane
    self.nOutputPlane = nOutputPlane
 
-   self.kW = kW
    self.kH = kH
+   self.kW = kW
 
-   self.weight = torch.Tensor(nInputPlane, kW, kH)
+   self.weight = torch.Tensor(nInputPlane, kH, kW)
    self.bias = torch.Tensor(nOutputPlane)
-   self.gradWeight = torch.Tensor(nInputPlane, kW, kH)
+   self.gradWeight = torch.Tensor(nInputPlane, kH, kW)
    self.gradBias = torch.Tensor(nOutputPlane)
 
    self.ones = torch.Tensor()
