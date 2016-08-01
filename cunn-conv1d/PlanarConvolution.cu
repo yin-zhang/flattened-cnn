@@ -90,7 +90,6 @@ __global__ void conv_planar_naive_gradParam(const int n, float *dw,
 {
    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < n; i += blockDim.x*gridDim.x) {
       int iW = oW + kW - 1;
-      int iH = oH + kH - 1;
       
       int iC = i/(kH*kW);
       int row = (i%(kH*kW))/kW;
