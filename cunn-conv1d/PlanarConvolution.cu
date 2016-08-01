@@ -38,9 +38,13 @@ __global__ void conv_planar_naive_output(const int n, float *y,
    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < n; i += blockDim.x*gridDim.x) {
       int oW = iW - kW + 1;
       int oH = iH - kH + 1;
-      
-      int x_offset = (i/oW)*iW + i%oW;
-      int w_offset = (i/(oW*oH))*kH*kW;
+
+      int iC = i/(oH*oW);
+      int row = (i%(oH*oW))/oW;
+      int col = i%oW;
+
+      int x_offset = iC*(iW*iH) + row*iW + col;
+      int w_offset = iC*kH*kW;
 
       for (int h = 0; h < kH; h++) {
          for (int k = 0; k < kW; k++) {
@@ -76,7 +80,7 @@ __global__ void conv_planar_naive_gradInput(const int n, float *dx,
       dx[i] = 0.0f;
       for (int h = h_begin; h < h_end; h++) {
          for (int k = k_begin; k < k_end; k++) {
-            dx[i] += w[w_offset + h*kW + k]*dy[dy_offset - h*iW - k];
+            dx[i] += w[w_offset + h*kW + k]*dy[dy_offset - h*oW - k];
          }
       }
    }
