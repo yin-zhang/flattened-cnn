@@ -2,14 +2,14 @@ package = "cunnconv1d"
 version = "scm-1"
 
 source = {
-   url = "git://github.com/jhjin/flattened-cnn.git",
+   url = "git://github.com/yin-zhang/flattened-cnn.git",
 }
 
 description = {
    summary = "1D Convolutions for Torch cunn",
    detailed = [[
    ]],
-   homepage = "https://github.com/jhjin/flattened-cnn",
+   homepage = "https://github.com/yin-zhang/flattened-cnn",
    license = "MIT"
 }
 
