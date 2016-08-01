@@ -1,10 +1,14 @@
 ## Flattened convolutional neural networks
 
+This is a fork from https://raw.githubusercontent.com/jhjin/flattened-cnn, with the extension to support
+2D convolution within a channel.
+
 The original package has 1D convolution modules (over channel, in vertical, in horizontal) used in
 [Flattened Convolutional Neural Networks for Feedforward Acceleration] (http://arxiv.org/abs/1412.5474)
 where we denote the flattened convolution layer as a sequence of one-dimensional filters across all 3D directions.
 
-We add a new 2D convolution module PlanarConvolution, which is applied within each channel.
+Our new 2D convolution module PlanarConvolution generalizes the original 1D modules
+VerticalConvolution and HorizontalConvolution and can perform 2D convolution within a channel.
 
 ### Install
 
@@ -43,4 +47,12 @@ Run the command below.
 
 ```bash
 th example.lua
+```
+
+### Example of PlanarConvolution
+
+Run the command below.
+
+```bash
+th example_planar.lua
 ```
