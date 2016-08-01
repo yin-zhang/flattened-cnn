@@ -10,6 +10,10 @@ where we denote the flattened convolution layer as a sequence of one-dimensional
 Our new 2D convolution module PlanarConvolution generalizes the original 1D modules
 VerticalConvolution and HorizontalConvolution and can perform 2D convolution within a channel.
 
+The motivation for PlanarConvolution is that when the kernel size is small (e.g. 3x3), it may be more
+efficient to have a single PlanarConvolution instead of having a VerticalConvolution and a HorizontalConvolution. 
+Saving an extra layer is potentially useful for implementing CNN in thin devices.
+
 ### Install
 
 Choose both or either of `nn`/`cunn` backend packages depending on your computing environment.
@@ -37,7 +41,7 @@ This is a list of available modules.
 nn.LateralConvolution(nInputPlane, nOutputPlane)        -- 1d conv over feature
 nn.HorizontalConvolution(nInputPlane, nOutputPlane, kL) -- 1d conv in horizontal
 nn.VerticalConvolution(nInputPlane, nOutputPlane, kL)   -- 1d conv in vertical
-nn.PlanarConvolution(nInputPlane, nOutputPlane, kW, kH)   -- 2d conv within feature
+nn.PlanarConvolution(nInputPlane, nOutputPlane, kW, kH) -- 2d conv within feature
 ```
 
 
