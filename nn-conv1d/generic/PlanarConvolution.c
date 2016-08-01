@@ -199,19 +199,21 @@ static int nnconv1d_(PlanarConvolution_accGradParameters)(lua_State *L)
                                    nOutputPlane, -1, outputWidth*outputHeight, -1);
 
       // dot products
-      int i, j, k;
+      int i, j, h, k;
       for (i = 0; i < nInputPlane; i++) {
-         for (k = 0; k < kW*kH; k++) {
-             for (j = 0; j < outputHeight; j++) {
-                *(gradWeight->storage->data + gradWeight->storageOffset + i*gradWeight->stride[0] + k) +=
-                   scale*THBlas_(dot)
+         for (h = 0; h < kH; h++) {
+            for (k = 0; k < kW; k++) {
+               for (j = 0; j < outputHeight; j++) {
+                  *(gradWeight->storage->data + gradWeight->storageOffset + i*gradWeight->stride[0] + h*kW + k) +=
+                     scale*THBlas_(dot)
                       (outputWidth,
                        gradOutput_t->storage->data + gradOutput_t->storageOffset +
-                       i*gradOutput_t->stride[0] + j*gradOutput_t->stride[1],
+                       i*gradOutput_t->stride[0] + (j+h)*gradOutput_t->stride[1],
                        gradOutput_t->stride[2],
                        input_t->storage->data + input_t->storageOffset +
-                       i*input_t->stride[0] + j*input_t->stride[1] + k,
+                       i*input_t->stride[0] + (j+h)*input_t->stride[1] + k,
                        input_t->stride[2]);
+               }
             }
          }
       }
