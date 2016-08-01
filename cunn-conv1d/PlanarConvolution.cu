@@ -3,7 +3,7 @@
 
 // Kernel for fast unfold+copy
 // (borrowed from Caffe: https://github.com/BVLC/caffe/blob/master/src/caffe/layers/conv_layer.cu)
-__global__ void im2col_kernel_h(const int n, const float* data_im,
+__global__ void im2col_kernel_p(const int n, const float* data_im,
     const int height, const int width, const int ksize_h, const int ksize_w, const int pad_h,
     const int pad_w, const int stride_h, const int stride_w, const int height_col, const int width_col,
     float* data_col) {
@@ -339,7 +339,7 @@ static int cunnconv1d_PlanarConvolution_accGradParameters(lua_State *L) {
 
       // unroll
       long num_threads = nInputPlane*outputHeight*outputWidth;
-      im2col_kernel_h <<<GET_BLOCKS(num_threads), CUDA_NUM_THREADS>>> (
+      im2col_kernel_p <<<GET_BLOCKS(num_threads), CUDA_NUM_THREADS>>> (
          num_threads,
          THCudaTensor_data(state, input_n),
          inputHeight, inputWidth, kH, kW, 0, 0, 1, 1,
