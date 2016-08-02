@@ -39,7 +39,7 @@ local iH = 5
 local iW = 6
 local kW = 4
 local kH = 3
-local use_cuda = true
+local use_cuda = false
 
 
 -- pick an input
