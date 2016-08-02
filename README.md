@@ -16,7 +16,8 @@ Saving an extra layer is potentially useful for implementing CNN in thin devices
 
 To improve the efficiency of LateralConvolution, we added a new module LateralMaskedConvolution that accepts
 a mask matrix (of size nInputPlane * nOutputPlane).  All weights are first multiplied by the mask matrix
-in an element-wise fashion before applied to the input.
+in an element-wise fashion before applied to the input.  By making the mask matrix highly sparse, one can
+improve the efficiency of the resulting layer in a feed-forward neural network.
 
 ### Install
 
