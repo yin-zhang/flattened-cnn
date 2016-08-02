@@ -14,6 +14,10 @@ The motivation for PlanarConvolution is that when the kernel size is small (e.g.
 efficient to have a single PlanarConvolution instead of having a VerticalConvolution and a HorizontalConvolution. 
 Saving an extra layer is potentially useful for implementing CNN in thin devices.
 
+To improve the efficiency of LateralConvolution, we added a new module LateralMaskedConvolution that accepts
+a mask matrix (of size nInputPlane * nOutputPlane).  All weights are first multiplied by the mask matrix
+in an element-wise fashion before applied to the input.
+
 ### Install
 
 Choose both or either of `nn`/`cunn` backend packages depending on your computing environment.
@@ -38,25 +42,30 @@ luarocks make rocks/cunnconv1d-scm-1.rockspec
 This is a list of available modules.
 
 ```lua
-nn.LateralConvolution(nInputPlane, nOutputPlane)        -- 1d conv over feature
-nn.HorizontalConvolution(nInputPlane, nOutputPlane, kL) -- 1d conv in horizontal
-nn.VerticalConvolution(nInputPlane, nOutputPlane, kL)   -- 1d conv in vertical
-nn.PlanarConvolution(nInputPlane, nOutputPlane, kW, kH) -- 2d conv within feature
+nn.LateralConvolution(nInputPlane, nOutputPlane)              -- 1d conv over feature
+nn.LateralMaskedConvolution(nInputPlane, nOutputPlane, mask)  -- 1d masked conv over feature
+nn.HorizontalConvolution(nInputPlane, nOutputPlane, kL)       -- 1d conv in horizontal
+nn.VerticalConvolution(nInputPlane, nOutputPlane, kL)         -- 1d conv in vertical
+nn.PlanarConvolution(nInputPlane, nOutputPlane, kW, kH)       -- 2d conv within feature
 ```
 
 
 ### Example
 
-Run the command below.
+For the original example, run the command below.
 
 ```bash
 th example.lua
 ```
 
-### Example of PlanarConvolution
-
-Run the command below.
+For an example on PlanarConvolution, run the command below.
 
 ```bash
 th example_planar.lua
+```
+
+For an example on LateralMaskedConvolution, run the command below.
+
+```bash
+th example_masked.lua
 ```
