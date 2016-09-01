@@ -72,3 +72,23 @@ function HorizontalConvolution:accGradParameters(input, gradOutput, scale)
    input, gradOutput = makeContiguous(self, input, gradOutput)
    return input.nn.HorizontalConvolution_accGradParameters(self, input, gradOutput, scale)
 end
+
+function HorizontalConvolution:clearState()
+   -- don't call set because it might reset referenced tensors
+   local function clear(f)
+      if self[f] then
+         if torch.isTensor(self[f]) then
+            self[f] = self[f].new()
+         elseif type(self[f]) == 'table' then
+            self[f] = {}
+         else
+            self[f] = nil
+         end
+      end
+   end
+   clear('output')
+   clear('gradInput')
+   clear('_input')
+   clear('_gradOutput')
+   return self
+end
