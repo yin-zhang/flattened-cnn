@@ -74,6 +74,6 @@ function HorizontalConvolution:accGradParameters(input, gradOutput, scale)
 end
 
 function HorizontalConvolution:clearState()
-   nn.utils.clear(self, '_input', '_gradOutput')
+   nn.utils.clear(self, 'finput', 'fgradWeight', '_input', '_gradOutput')
    return nn.Module.clearState(self)
 end
