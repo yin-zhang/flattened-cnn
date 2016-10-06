@@ -1,5 +1,3 @@
-#include "THCUNN.h"
-#include "common.h"
 
 #include <thrust/transform.h>
 #include <thrust/reduce.h>
@@ -65,11 +63,15 @@ __global__ void upscale(float *input, float *output, long no_elements,
 }
 
 
-void THNN_CudaSpatialUpSamplingPeriodic_updateOutput(THCState *state, THCudaTensor *input, THCudaTensor *output, int scale_factor)
+static int cunnconv1d_SpatialUpSamplingPeriodic_updateOutput(lua_State *L)
 {
-  THCudaTensor_zero(state, output);
+  THCState *state = getCutorchState(L);
+  THCudaTensor *input = (THCudaTensor*)luaT_checkudata(L, 2, "torch.CudaTensor");
 
-  THCUNN_assertSameGPU(state, 2, input, output);
+  int scale_factor = luaT_getfieldcheckint(L, 1, "scale_factor");
+  THCudaTensor *output = (THCudaTensor*)luaT_getfieldcheckudata(L, 1, "output", "torch.CudaTensor");
+  
+  THCudaTensor_zero(state, output);
 
   input = THCudaTensor_newContiguous(state, input);
   // This is for allocating output Tensor
@@ -115,6 +117,8 @@ void THNN_CudaSpatialUpSamplingPeriodic_updateOutput(THCState *state, THCudaTens
 
   // final cut:
   THCudaTensor_free(state, input);
+
+  return 1;
 }
 
 /*
@@ -132,9 +136,15 @@ __global__ void downscale(float *gradInput_data, float *gradOutput_data, long no
 }
 
 
-void THNN_CudaSpatialUpSamplingPeriodic_updateGradInput(THCState *state, THCudaTensor *input, THCudaTensor *gradOutput, THCudaTensor *gradInput, int scale_factor)
+static int cunnconv1d_SpatialUpSamplingPeriodic_updateGradInput(lua_State *L)
 {
-  THCUNN_assertSameGPU(state, 2, gradOutput, gradInput);
+
+  THCState *state = getCutorchState(L);
+  THCudaTensor *input =  (THCudaTensor *)luaT_checkudata(L, 2, "torch.CudaTensor");
+  THCudaTensor *gradOutput = (THCudaTensor *)luaT_checkudata(L, 3, "torch.CudaTensor");
+
+  int scale_factor = luaT_getfieldcheckint(L, 1, "scale_factor");
+  THCudaTensor *gradInput = (THCudaTensor *)luaT_getfieldcheckudata(L, 1, "gradInput", "torch.CudaTensor");
 
   THCudaTensor_zero(state, gradInput);
 
@@ -177,4 +187,22 @@ void THNN_CudaSpatialUpSamplingPeriodic_updateGradInput(THCState *state, THCudaT
   downscale<<<blocks, threads, 0, THCState_getCurrentStream(state)>>> (gradInput_data, gradOutput_data, no_elements,
     scale_factor, d1, d2, d3);
   THCudaCheck(cudaGetLastError());
+
+  return 1;
 }
+
+
+static const struct luaL_Reg cunnconv1d_SpatialUpSamplingPeriodic__ [] = {
+   {"SpatialUpSamplingPeriodic_updateOutput", cunnconv1d_SpatialUpSamplingPeriodic_updateOutput},
+   {"SpatialUpSamplingPeriodic_updateGradInput", cunnconv1d_SpatialUpSamplingPeriodic_updateGradInput},
+   {NULL, NULL}
+};
+
+
+void cunnconv1d_SpatialUpSamplingPeriodic_init(lua_State *L)
+{
+   luaT_pushmetatable(L, "torch.CudaTensor");
+   luaT_registeratname(L, cunnconv1d_SpatialUpSamplingPeriodic__, "nn");
+   lua_pop(L,1);
+}
+

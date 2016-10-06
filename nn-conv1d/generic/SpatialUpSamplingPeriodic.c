@@ -2,12 +2,13 @@
 #define TH_GENERIC_FILE "generic/SpatialUpSamplingPeriodic.c"
 #else
 
-void THNN_(SpatialUpSamplingPeriodic_updateOutput)(
-    THNNState *state,
-    THTensor *input,
-    THTensor *output,
-    int scale_factor)
+static int nnconv1d_(SpatialUpSamplingPeriodic_updateOutput)(lua_State *L)
 {
+  THTensor *input = luaT_checkudata(L, 2, torch_Tensor);
+
+  THTensor *output = luaT_getfieldcheckudata(L, 1, "output", torch_Tensor);
+  int scale_factor = luaT_getfieldcheckint(L, 1, "scale_factor");
+
   // TODO: check argument shapes  
   int dW = scale_factor;
   int dH = scale_factor;
@@ -70,15 +71,19 @@ void THNN_(SpatialUpSamplingPeriodic_updateOutput)(
       }
     }
   }
+
+  return 1;
 }
 
-void THNN_(SpatialUpSamplingPeriodic_updateGradInput)(
-    THNNState *state,
-    THTensor *input,
-    THTensor *gradOutput,
-    THTensor *gradInput,
-    int scale_factor)
+static int
+nnconv1d_(SpatialUpSamplingPeriodic_updateGradInput)(lua_State *L)
 {
+  THTensor *input = luaT_checkudata(L, 2, torch_Tensor);
+  THTensor *gradOutput = luaT_checkudata(L, 3, torch_Tensor);
+
+  THTensor *gradInput = luaT_getfieldcheckudata(L, 1, "gradInput", torch_Tensor);
+  int scale_factor = luaT_getfieldcheckint(L, 1, "scale_factor");
+  
   // TODO: check argument shapes  
   int dW = scale_factor;
   int dH = scale_factor;
@@ -140,6 +145,22 @@ void THNN_(SpatialUpSamplingPeriodic_updateGradInput)(
       }
     }
   }
+
+  return 1;
 }
+
+static const struct luaL_Reg nnconv1d_(SpatialUpSamplingPeriodic__) [] = {
+  {"SpatialUpSamplingPeriodic_updateOutput", nnconv1d_(SpatialUpSamplingPeriodic_updateOutput)},
+  {"SpatialUpSamplingPeriodic_updateGradInput", nnconv1d_(SpatialUpSamplingPeriodic_updateGradInput)},
+  {NULL, NULL}
+};
+
+static void nnconv1d_(SpatialUpSamplingPeriodic_init)(lua_State *L)
+{
+  luaT_pushmetatable(L, torch_Tensor);
+  luaT_registeratname(L, nnconv1d_(SpatialUpSamplingPeriodic__), "nn");
+  lua_pop(L,1);
+}
+
 
 #endif

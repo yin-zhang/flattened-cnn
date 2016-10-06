@@ -48,21 +48,12 @@ function SpatialUpSamplingPeriodic:updateOutput(input)
    else
      self.output:resize(self.outputSize)
    end
-   input.THNN.SpatialUpSamplingPeriodic_updateOutput(
-      input:cdata(),
-      self.output:cdata(),
-      self.scale_factor
-   )
+   input.nn.SpatialUpSamplingPeriodic_updateOutput(self, input)
    return self.output
 end
 
 function SpatialUpSamplingPeriodic:updateGradInput(input, gradOutput)
    self.gradInput:resizeAs(input)
-   input.THNN.SpatialUpSamplingPeriodic_updateGradInput(
-      input:cdata(),
-      gradOutput:cdata(),
-      self.gradInput:cdata(),
-      self.scale_factor
-   )
+   input.nn.SpatialUpSamplingPeriodic_updateGradInput(self, input, gradOutput)
    return self.gradInput
 end
