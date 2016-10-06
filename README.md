@@ -19,6 +19,9 @@ a mask matrix (of size nInputPlane * nOutputPlane).  All weights are first multi
 in an element-wise fashion before applied to the input.  By making the mask matrix highly sparse, one can
 improve the efficiency of the resulting layer in a feed-forward neural network.
 
+We also implemented SpatialUpSamplingPeriodic, which in combination with PlanarConvolution can be used to emulate
+planar-version of SpatialFullConvolution.
+
 ### Install
 
 Choose both or either of `nn`/`cunn` backend packages depending on your computing environment.
@@ -48,6 +51,7 @@ nn.LateralMaskedConvolution(nInputPlane, nOutputPlane, mask)  -- 1d masked conv 
 nn.HorizontalConvolution(nInputPlane, nOutputPlane, kL)       -- 1d conv in horizontal
 nn.VerticalConvolution(nInputPlane, nOutputPlane, kL)         -- 1d conv in vertical
 nn.PlanarConvolution(nInputPlane, nOutputPlane, kW, kH)       -- 2d conv within feature
+nn.SpatialUpSamplingPeriodic(scale)                           -- periodic upsampling 
 ```
 
 

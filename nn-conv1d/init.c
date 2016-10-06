@@ -20,6 +20,9 @@
 #include "generic/PlanarConvolution.c"
 #include "THGenerateFloatTypes.h"
 
+#include "generic/SpatialUpSamplingPeriodic.c"
+#include "THGenerateFloatTypes.h"
+
 LUA_EXTERNC DLL_EXPORT int luaopen_libnnconv1d(lua_State *L);
 
 int luaopen_libnnconv1d(lua_State *L)
@@ -31,12 +34,14 @@ int luaopen_libnnconv1d(lua_State *L)
   nnconv1d_FloatVerticalConvolution_init(L);
   nnconv1d_FloatHorizontalConvolution_init(L);
   nnconv1d_FloatPlanarConvolution_init(L);
+  nnconv1d_FloatSpatialUpSamplingPeriodic_init(L);
 
   nnconv1d_DoubleLateralMaskedConvolution_init(L);
   nnconv1d_DoubleLateralConvolution_init(L);
   nnconv1d_DoubleVerticalConvolution_init(L);
   nnconv1d_DoubleHorizontalConvolution_init(L);
   nnconv1d_DoublePlanarConvolution_init(L);
+  nnconv1d_DoubleSpatialUpSamplingPeriodic_init(L);
 
   return 1;
 }
