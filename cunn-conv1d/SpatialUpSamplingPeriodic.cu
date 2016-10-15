@@ -19,11 +19,11 @@ __device__ int translate_idx(int ii, int d1, int d2, int d3, int x_scale_factor,
   y = ii % d1;
   ii = ii/d1;
   x = ii;
-  if ((w % y_scale_factor != 0) || (z % x_scale_factor != 0)) {
+  if ((w % x_scale_factor != 0) || (z % y_scale_factor != 0)) {
     return -1;
   }
-  w = w/y_scale_factor;
-  z = z/x_scale_factor;
+  w = w/x_scale_factor;
+  z = z/y_scale_factor;
   d2 /= y_scale_factor;
   d3 /= x_scale_factor;
   return (((x*d1+y)*d2)+z)*d3+w;
@@ -39,8 +39,8 @@ __device__ int translate_idx_inv(int ii, int d1, int d2, int d3, int x_scale_fac
   y = ii % d1;
   ii = ii/d1;
   x = ii;
-  w = w*y_scale_factor+off_x;
-  z = z*x_scale_factor+off_y;
+  w = w*x_scale_factor+off_x;
+  z = z*y_scale_factor+off_y;
   d2 *= y_scale_factor;
   d3 *= x_scale_factor;
   return (((x*d1+y)*d2)+z)*d3+w;
