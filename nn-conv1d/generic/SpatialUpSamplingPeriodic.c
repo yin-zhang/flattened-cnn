@@ -7,11 +7,12 @@ static int nnconv1d_(SpatialUpSamplingPeriodic_updateOutput)(lua_State *L)
   THTensor *input = luaT_checkudata(L, 2, torch_Tensor);
 
   THTensor *output = luaT_getfieldcheckudata(L, 1, "output", torch_Tensor);
-  int scale_factor = luaT_getfieldcheckint(L, 1, "scale_factor");
+  int x_scale_factor = luaT_getfieldcheckint(L, 1, "x_scale_factor");
+  int y_scale_factor = luaT_getfieldcheckint(L, 1, "y_scale_factor");
 
   // TODO: check argument shapes  
-  int dW = scale_factor;
-  int dH = scale_factor;
+  int dW = x_scale_factor;
+  int dH = y_scale_factor;
   int xDim = input->nDimension-2;
   int yDim = input->nDimension-1;
 
@@ -82,11 +83,12 @@ nnconv1d_(SpatialUpSamplingPeriodic_updateGradInput)(lua_State *L)
   THTensor *gradOutput = luaT_checkudata(L, 3, torch_Tensor);
 
   THTensor *gradInput = luaT_getfieldcheckudata(L, 1, "gradInput", torch_Tensor);
-  int scale_factor = luaT_getfieldcheckint(L, 1, "scale_factor");
+  int x_scale_factor = luaT_getfieldcheckint(L, 1, "x_scale_factor");
+  int y_scale_factor = luaT_getfieldcheckint(L, 1, "y_scale_factor");
   
   // TODO: check argument shapes  
-  int dW = scale_factor;
-  int dH = scale_factor;
+  int dW = x_scale_factor;
+  int dH = y_scale_factor;
   int xDim = gradInput->nDimension-2;
   int yDim = gradInput->nDimension-1;
 
