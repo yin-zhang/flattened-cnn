@@ -13,8 +13,8 @@ static int nnconv1d_(SpatialUpSamplingPeriodic_updateOutput)(lua_State *L)
   // TODO: check argument shapes  
   int dW = x_scale_factor;
   int dH = y_scale_factor;
-  int xDim = input->nDimension-2;
-  int yDim = input->nDimension-1;
+  int yDim = input->nDimension-2;
+  int xDim = input->nDimension-1;
 
   // dims
   int idim = input->nDimension;  // Guaranteed to be between 3 and 5
@@ -89,8 +89,8 @@ nnconv1d_(SpatialUpSamplingPeriodic_updateGradInput)(lua_State *L)
   // TODO: check argument shapes  
   int dW = x_scale_factor;
   int dH = y_scale_factor;
-  int xDim = gradInput->nDimension-2;
-  int yDim = gradInput->nDimension-1;
+  int yDim = gradInput->nDimension-2;
+  int xDim = gradInput->nDimension-1;
 
   // dims
   int idim = gradInput->nDimension;  // Guaranteed to be between 3 and 5
