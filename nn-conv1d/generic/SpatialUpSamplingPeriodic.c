@@ -53,6 +53,10 @@ static int nnconv1d_(SpatialUpSamplingPeriodic_updateOutput)(lua_State *L)
           iin[3] = i3;
 
           idst = i0*os[0] + i1*os[1] + i2*os[2];
+          if (idim > 3) {
+            idst += i3*os[3];
+          }
+
           if ((iout[xDim] % dW != 0) || (iout[yDim] % dH != 0)) {
             pout[idst] = 0;
           } else {
@@ -62,7 +66,6 @@ static int nnconv1d_(SpatialUpSamplingPeriodic_updateOutput)(lua_State *L)
             
             isrc = iin[0]*is[0] + iin[1]*is[1] + iin[2]*is[2];
             if (idim > 3) {
-              idst += i3*os[3];
               isrc += iin[3]*is[3];
             }
 
