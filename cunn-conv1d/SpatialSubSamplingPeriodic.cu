@@ -9,7 +9,7 @@
  * Description:
  */
 
-__device__ int translate_idx(int ii, int d1, int d2, int d3, int dW, int dH, int iW, int iH)
+__device__ int xlate_idx(int ii, int d1, int d2, int d3, int dW, int dH, int iW, int iH)
 {
   int x, y, z, w;
   w = ii % d3;
@@ -29,7 +29,7 @@ __device__ int translate_idx(int ii, int d1, int d2, int d3, int dW, int dH, int
   return (((x*d1+y)*d2)+z)*d3+w;
 }
 
-__device__ int translate_idx_inv(int ii, int d1, int d2, int d3, int dW, int dH, int iW, int iH)
+__device__ int xlate_idx_inv(int ii, int d1, int d2, int d3, int dW, int dH, int iW, int iH)
 {
   int x, y, z, w;
   w = ii % d3;
@@ -53,7 +53,7 @@ __global__ void downscale(float *input, float *output, long no_elements,
   long ii = threadIdx.x + blockDim.x * blockIdx.x;
   ii += threadIdx.y + blockDim.y * (blockDim.x * gridDim.x) * blockIdx.y;
   if (ii >= no_elements) return;
-  int ipidx = translate_idx_inv(ii, d1, d2, d3, dW, dH, iW, iH);
+  int ipidx = xlate_idx_inv(ii, d1, d2, d3, dW, dH, iW, iH);
   output[ii]=input[ipidx];
 }
 
@@ -124,13 +124,13 @@ static int cunnconv1d_SpatialSubSamplingPeriodic_updateOutput(lua_State *L)
  * Description:
  */
 __global__ void upscale(float *gradInput_data, float *gradOutput_data, long no_elements,
-                              int dW, int dH, int iW, iH, int d1, int d2, int d3)
+                              int dW, int dH, int iW, int iH, int d1, int d2, int d3)
 {
   // output offset:
   long ii = threadIdx.x + blockDim.x * blockIdx.x;
   ii += threadIdx.y + blockDim.y * (blockDim.x * gridDim.x) * blockIdx.y;
   if (ii >= no_elements) return;
-  int ipidx = translate_idx(ii, d1, d2, d3, dW, dH, iW, iH);
+  int ipidx = xlate_idx(ii, d1, d2, d3, dW, dH, iW, iH);
   if (ipidx >= 0) {
     gradInput_data[ii] += gradOutput_data[ipidx];
   }
