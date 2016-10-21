@@ -73,8 +73,8 @@ static int cunnconv1d_SpatialSubSamplingPeriodic_updateOutput(lua_State *L)
   for(i = 0; i < input->nDimension - 2; i++){
     no_elements *= input->size[i];
   }
-  no_elements *= (input->size[i++] - iH) / dH;
-  no_elements *= (input->size[i++] - iW) / dW;
+  no_elements *= (input->size[i++] - iH + dH - 1) / dH;
+  no_elements *= (input->size[i++] - iW + dW - 1) / dW;
 
   int d1;
   int d2;
