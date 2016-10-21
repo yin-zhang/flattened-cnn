@@ -136,7 +136,7 @@ nnconv1d_(SpatialSubSamplingPeriodic_updateGradInput)(lua_State *L)
 
           // Now accumulate the gradients from gradOutput
           
-          iin[xDim] = dW * iout[xDim] - iW;
+          iin[xDim] = dW * iout[xDim] + iW;
           iin[yDim] = dH * iout[yDim] + iH;
           idst = iin[0]*is[0] + iin[1]*is[1] + iin[2]*is[2];
           if (idim > 3) {
