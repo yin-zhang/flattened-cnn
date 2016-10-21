@@ -56,10 +56,24 @@ function SpatialUpSamplingPeriodic:__init(dW,dH,iW,iH)
    self.usage = nil
 end
 
+function SpatialUpSamplingPeriodic:ensureCompatibility()
+    if self.dW == nil and self.x_scale_factor ~= nil then
+        self.dW = self.x_scale_factor
+        self.iW = 0
+    end
+    if self.dH == nil and self.y_scale_factor ~= nil then
+        self.dH = self.y_scale_factor
+        self.iH = 0
+    end
+end
+
 function SpatialUpSamplingPeriodic:updateOutput(input)
    if input:dim() ~= 4 and input:dim() ~= 3 then
      error('SpatialUpSamplingPeriodic only support 3D or 4D tensors')
    end
+
+   self:ensureCompatibility()
+   
    -- Copy the input size
    local xdim = input:dim()
    local ydim = input:dim() - 1
@@ -81,6 +95,8 @@ function SpatialUpSamplingPeriodic:updateOutput(input)
 end
 
 function SpatialUpSamplingPeriodic:updateGradInput(input, gradOutput)
+   self:ensureCompatibility()
+
    self.gradInput:resizeAs(input)
    input.nn.SpatialUpSamplingPeriodic_updateGradInput(self, input, gradOutput)
    return self.gradInput
