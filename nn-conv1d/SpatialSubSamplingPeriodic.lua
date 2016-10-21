@@ -53,8 +53,8 @@ function SpatialSubSamplingPeriodic:updateOutput(input)
      self.inputSize[i] = input:size(i)
      self.outputSize[i] = input:size(i)
    end
-   self.outputSize[ydim] = math.ceil(self.outputSize[ydim] / self.dH)
-   self.outputSize[xdim] = math.ceil(self.outputSize[xdim] / self.dW)
+   self.outputSize[ydim] = math.ceil((self.outputSize[ydim] - self.iH) / self.dH)
+   self.outputSize[xdim] = math.ceil((self.outputSize[xdim] - self.iW) / self.dW)
    -- Resize the output if needed
    if input:dim() == 3 then
      self.output:resize(self.outputSize[1], self.outputSize[2],
