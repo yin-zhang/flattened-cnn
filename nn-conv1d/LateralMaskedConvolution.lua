@@ -34,6 +34,7 @@ function LateralMaskedConvolution:reset(stdv)
       self.weight:uniform(-stdv, stdv)
       self.bias:uniform(-stdv, stdv)
    end
+   self.weight = torch.cmul(self.weight, self.mask)
 end
 
 local function makeContiguous(self, input, gradOutput)
