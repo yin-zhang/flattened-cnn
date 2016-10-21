@@ -9,7 +9,7 @@
  * Description:
  */
 
-__device__ int translate_idx(int ii, int d1, int d2, int d3, int x_scale_factor, int y_scale_factor)
+__device__ int translate_idx(int ii, int d1, int d2, int d3, int dW, int dH, int iW, int iH)
 {
   int x, y, z, w;
   w = ii % d3;
@@ -19,17 +19,17 @@ __device__ int translate_idx(int ii, int d1, int d2, int d3, int x_scale_factor,
   y = ii % d1;
   ii = ii/d1;
   x = ii;
-  if ((w % x_scale_factor != 0) || (z % y_scale_factor != 0)) {
+  if ((w % dW != iW) || (z % dH != iH)) {
     return -1;
   }
-  w = w/x_scale_factor;
-  z = z/y_scale_factor;
-  d2 /= y_scale_factor;
-  d3 /= x_scale_factor;
+  w = w/dW;
+  z = z/dH;
+  d2 /= dH;
+  d3 /= dW;
   return (((x*d1+y)*d2)+z)*d3+w;
 }
 
-__device__ int translate_idx_inv(int ii, int d1, int d2, int d3, int x_scale_factor, int y_scale_factor, int off_x, int off_y)
+__device__ int translate_idx_inv(int ii, int d1, int d2, int d3, int dW, int dH, int off_x, int off_y)
 {
   int x, y, z, w;
   w = ii % d3;
@@ -39,22 +39,22 @@ __device__ int translate_idx_inv(int ii, int d1, int d2, int d3, int x_scale_fac
   y = ii % d1;
   ii = ii/d1;
   x = ii;
-  w = w*x_scale_factor+off_x;
-  z = z*y_scale_factor+off_y;
-  d2 *= y_scale_factor;
-  d3 *= x_scale_factor;
+  w = w*dW+off_x;
+  z = z*dH+off_y;
+  d2 *= dH;
+  d3 *= dW;
   return (((x*d1+y)*d2)+z)*d3+w;
 
 }
 
 __global__ void upscale(float *input, float *output, long no_elements,
-                        int x_scale_factor, int y_scale_factor, int d1, int d2, int d3)
+                        int dW, int dH, int iW, int iH, int d1, int d2, int d3)
 {
   // output offset:
   long ii = threadIdx.x + blockDim.x * blockIdx.x;
   ii += threadIdx.y + blockDim.y * (blockDim.x * gridDim.x) * blockIdx.y;
   if (ii >= no_elements) return;
-  int ipidx = translate_idx(ii, d1, d2, d3, x_scale_factor, y_scale_factor);
+  int ipidx = translate_idx(ii, d1, d2, d3, dW, dH, iW, iH);
   if (ipidx >= 0) {
     output[ii]=input[ipidx];
   } else {
@@ -68,8 +68,10 @@ static int cunnconv1d_SpatialUpSamplingPeriodic_updateOutput(lua_State *L)
   THCState *state = getCutorchState(L);
   THCudaTensor *input = (THCudaTensor*)luaT_checkudata(L, 2, "torch.CudaTensor");
 
-  int x_scale_factor = luaT_getfieldcheckint(L, 1, "x_scale_factor");
-  int y_scale_factor = luaT_getfieldcheckint(L, 1, "y_scale_factor");
+  int dW = luaT_getfieldcheckint(L, 1, "dW");
+  int dH = luaT_getfieldcheckint(L, 1, "dH");
+  int iW = luaT_getfieldcheckint(L, 1, "iW");
+  int iH = luaT_getfieldcheckint(L, 1, "iH");
   THCudaTensor *output = (THCudaTensor*)luaT_getfieldcheckudata(L, 1, "output", "torch.CudaTensor");
   
   THCudaTensor_zero(state, output);
@@ -80,7 +82,7 @@ static int cunnconv1d_SpatialUpSamplingPeriodic_updateOutput(lua_State *L)
   for(int i = 0; i < input->nDimension; i++){
     no_elements *= input->size[i];
   }
-  no_elements *= x_scale_factor * y_scale_factor;
+  no_elements *= dW * dH;
 
   int d1;
   int d2;
@@ -113,7 +115,7 @@ static int cunnconv1d_SpatialUpSamplingPeriodic_updateOutput(lua_State *L)
   dim3 threads(nthreads);
 
   // kernel:
-  upscale<<<blocks, threads, 0, THCState_getCurrentStream(state)>>> (input_data, output_data, no_elements, x_scale_factor, y_scale_factor, d1, d2, d3);
+  upscale<<<blocks, threads, 0, THCState_getCurrentStream(state)>>> (input_data, output_data, no_elements, dW, dH, iW, iH, d1, d2, d3);
   THCudaCheck(cudaGetLastError());
 
   // final cut:
@@ -126,13 +128,13 @@ static int cunnconv1d_SpatialUpSamplingPeriodic_updateOutput(lua_State *L)
  * Description:
  */
 __global__ void downscale(float *gradInput_data, float *gradOutput_data, long no_elements,
-                              int x_scale_factor, int y_scale_factor, int d1, int d2, int d3)
+                              int dW, int dH, int iW, int iH, int d1, int d2, int d3)
 {
   // output offset:
   long ii = threadIdx.x + blockDim.x * blockIdx.x;
   ii += threadIdx.y + blockDim.y * (blockDim.x * gridDim.x) * blockIdx.y;
   if (ii >= no_elements) return;
-  int ipidx = translate_idx_inv(ii, d1, d2, d3, x_scale_factor, y_scale_factor, 0, 0);
+  int ipidx = translate_idx_inv(ii, d1, d2, d3, dW, dH, iW, iH);
   gradInput_data[ii] += gradOutput_data[ipidx];
 }
 
@@ -144,8 +146,10 @@ static int cunnconv1d_SpatialUpSamplingPeriodic_updateGradInput(lua_State *L)
   THCudaTensor *input =  (THCudaTensor *)luaT_checkudata(L, 2, "torch.CudaTensor");
   THCudaTensor *gradOutput = (THCudaTensor *)luaT_checkudata(L, 3, "torch.CudaTensor");
 
-  int x_scale_factor = luaT_getfieldcheckint(L, 1, "x_scale_factor");
-  int y_scale_factor = luaT_getfieldcheckint(L, 1, "y_scale_factor");
+  int dW = luaT_getfieldcheckint(L, 1, "dW");
+  int dH = luaT_getfieldcheckint(L, 1, "dH");
+  int iW = luaT_getfieldcheckint(L, 1, "iW");
+  int iH = luaT_getfieldcheckint(L, 1, "iH");
   THCudaTensor *gradInput = (THCudaTensor *)luaT_getfieldcheckudata(L, 1, "gradInput", "torch.CudaTensor");
 
   THCudaTensor_zero(state, gradInput);
@@ -187,7 +191,7 @@ static int cunnconv1d_SpatialUpSamplingPeriodic_updateGradInput(lua_State *L)
 
   // kernel:
   downscale<<<blocks, threads, 0, THCState_getCurrentStream(state)>>> (gradInput_data, gradOutput_data, no_elements,
-    x_scale_factor, y_scale_factor, d1, d2, d3);
+    dW, dH, iW, iH, d1, d2, d3);
   THCudaCheck(cudaGetLastError());
 
   return 1;

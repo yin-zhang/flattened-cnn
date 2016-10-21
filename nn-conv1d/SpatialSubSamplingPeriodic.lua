@@ -16,6 +16,19 @@ oheight  = height*scale_factor
 function SpatialSubSamplingPeriodic:__init(dW,dH,iW,iH)
    parent.__init(self)
 
+   if dW == nil then
+       dW = 1
+   end
+   if dH == nil then
+       dH = dW
+   end
+   if iW == nil then
+       iW = 0
+   end
+   if iH == nil then
+       iH = 0
+   end
+   
    self.dW = dW
    self.dH = dH
    self.iW = iW

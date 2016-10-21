@@ -13,25 +13,44 @@ owidth  = width*scale_factor
 oheight  = height*scale_factor
 --]]
 
-function SpatialUpSamplingPeriodic:__init(xscale,yscale)
+function SpatialUpSamplingPeriodic:__init(dW,dH,iW,iH)
    parent.__init(self)
 
-   if xscale == nil then
-       xscale = 1
+   if dW == nil then
+       dW = 1
+   end   
+   if dH == nil then
+       dH = dW
    end
-   
-   if yscale == nil then
-       yscale = xscale
+   if iW == nil then
+       iW = 0
    end
+   if iH == nil then
+       iH = 0
+   end
+
    
-   self.x_scale_factor = xscale
-   self.y_scale_factor = yscale
-   if self.x_scale_factor < 1 or self.y_scale_factor < 1 then
+   self.dW = dW
+   self.dH = dH
+   self.iW = iW
+   self.iH = iH
+
+   if self.dW < 1 or self.dH < 1 then
      error('scale_factor must be no less than 1')
    end
-   if math.floor(self.x_scale_factor) ~= self.x_scale_factor or math.floor(self.y_scale_factor) ~= self.y_scale_factor then
+
+   if math.floor(self.dW) ~= self.dW or math.floor(self.dH) ~= self.dH then
      error('scale_factor must be integer')
    end
+
+   if iW < 0 or iW >= dW then
+       error('iW must satisfy 0 <= iW < dW')
+   end
+
+   if iH < 0 or iH >= dH then
+       error('iH must satisfy 0 <= iH < dH')
+   end
+   
    self.inputSize = torch.LongStorage(4)
    self.outputSize = torch.LongStorage(4)
    self.usage = nil
@@ -48,8 +67,8 @@ function SpatialUpSamplingPeriodic:updateOutput(input)
      self.inputSize[i] = input:size(i)
      self.outputSize[i] = input:size(i)
    end
-   self.outputSize[ydim] = self.outputSize[ydim] * self.y_scale_factor
-   self.outputSize[xdim] = self.outputSize[xdim] * self.x_scale_factor
+   self.outputSize[ydim] = self.outputSize[ydim] * self.dH
+   self.outputSize[xdim] = self.outputSize[xdim] * self.dW
    -- Resize the output if needed
    if input:dim() == 3 then
      self.output:resize(self.outputSize[1], self.outputSize[2],
