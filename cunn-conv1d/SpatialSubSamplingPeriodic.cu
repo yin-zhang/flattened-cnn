@@ -9,7 +9,7 @@
  * Description:
  */
 
-__device__ int xlate_idx(int ii, int d1, int d2, int d3, int dW, int dH, int iW, int iH)
+__device__ int xlate_idx(int ii, int d1, int d2, int d3, int D2, int D3, int dW, int dH, int iW, int iH)
 {
   int x, y, z, w;
   w = ii % d3;
@@ -24,12 +24,10 @@ __device__ int xlate_idx(int ii, int d1, int d2, int d3, int dW, int dH, int iW,
   }
   w = w/dW;
   z = z/dH;
-  d2 = (d2-iH)/dH;
-  d3 = (d3-iW)/dW;
-  return (((x*d1+y)*d2)+z)*d3+w;
+  return (((x*d1+y)*D2)+z)*D3+w;
 }
 
-__device__ int xlate_idx_inv(int ii, int d1, int d2, int d3, int dW, int dH, int iW, int iH)
+__device__ int xlate_idx_inv(int ii, int d1, int d2, int d3, int D2, int D3, int dW, int dH, int iW, int iH)
 {
   int x, y, z, w;
   w = ii % d3;
@@ -41,19 +39,17 @@ __device__ int xlate_idx_inv(int ii, int d1, int d2, int d3, int dW, int dH, int
   x = ii;
   w = w*dW+iW;
   z = z*dH+iH;
-  d2 *= dH;
-  d3 *= dW;
-  return (((x*d1+y)*d2)+z)*d3+w;
+  return (((x*d1+y)*D2)+z)*D3+w;
 }
 
 __global__ void downscale(float *input, float *output, long no_elements,
-                        int dW, int dH, int iW, int iH, int d1, int d2, int d3)
+                        int dW, int dH, int iW, int iH, int d1, int d2, int d3, int D2, int D3)
 {
   // output offset:
   long ii = threadIdx.x + blockDim.x * blockIdx.x;
   ii += threadIdx.y + blockDim.y * (blockDim.x * gridDim.x) * blockIdx.y;
   if (ii >= no_elements) return;
-  int ipidx = xlate_idx_inv(ii, d1, d2, d3, dW, dH, iW, iH);
+  int ipidx = xlate_idx_inv(ii, d1, d2, d3, D2, D3, dW, dH, iW, iH);
   output[ii]=input[ipidx];
 }
 
@@ -94,6 +90,17 @@ static int cunnconv1d_SpatialSubSamplingPeriodic_updateOutput(lua_State *L)
     d3 = output->size[3];
   }
 
+  int D2;
+  int D3;
+
+  if (input->nDimension == 3) {
+    D2 = input->size[1];
+    D3 = input->size[2];
+  } else {
+    D2 = input->size[2];
+    D3 = input->size[3];
+  }
+
   float *input_data = THCudaTensor_data(state, input);
   float *output_data = THCudaTensor_data(state, output);
 
@@ -111,7 +118,7 @@ static int cunnconv1d_SpatialSubSamplingPeriodic_updateOutput(lua_State *L)
   dim3 threads(nthreads);
 
   // kernel:
-  downscale<<<blocks, threads, 0, THCState_getCurrentStream(state)>>> (input_data, output_data, no_elements, dW, dH, iW, iH, d1, d2, d3);
+  downscale<<<blocks, threads, 0, THCState_getCurrentStream(state)>>> (input_data, output_data, no_elements, dW, dH, iW, iH, d1, d2, d3, D2, D3);
   THCudaCheck(cudaGetLastError());
 
   // final cut:
@@ -124,13 +131,13 @@ static int cunnconv1d_SpatialSubSamplingPeriodic_updateOutput(lua_State *L)
  * Description:
  */
 __global__ void upscale(float *gradInput_data, float *gradOutput_data, long no_elements,
-                              int dW, int dH, int iW, int iH, int d1, int d2, int d3)
+                              int dW, int dH, int iW, int iH, int d1, int d2, int d3, int D2, int D3)
 {
   // output offset:
   long ii = threadIdx.x + blockDim.x * blockIdx.x;
   ii += threadIdx.y + blockDim.y * (blockDim.x * gridDim.x) * blockIdx.y;
   if (ii >= no_elements) return;
-  int ipidx = xlate_idx(ii, d1, d2, d3, dW, dH, iW, iH);
+  int ipidx = xlate_idx(ii, d1, d2, d3, D2, D3, dW, dH, iW, iH);
   if (ipidx >= 0) {
     gradInput_data[ii] += gradOutput_data[ipidx];
   }
@@ -174,6 +181,17 @@ static int cunnconv1d_SpatialSubSamplingPeriodic_updateGradInput(lua_State *L)
     d3 = gradInput->size[3];
   }
 
+  int D2;
+  int D3;
+
+  if (gradInput->nDimension == 3) {
+    D2 = gradOutput->size[1];
+    D3 = gradOutput->size[2];
+  } else {
+    D2 = gradOutput->size[2];
+    D3 = gradOutput->size[3];
+  }
+
   // cuda blocks & threads:
   long nthreads = 256;
   // Max number of blocks: http://en.wikipedia.org/wiki/CUDA
@@ -189,7 +207,7 @@ static int cunnconv1d_SpatialSubSamplingPeriodic_updateGradInput(lua_State *L)
 
   // kernel:
   upscale<<<blocks, threads, 0, THCState_getCurrentStream(state)>>> (gradInput_data, gradOutput_data, no_elements,
-    dW, dH, iW, iH, d1, d2, d3);
+    dW, dH, iW, iH, d1, d2, d3, D2, D3);
   THCudaCheck(cudaGetLastError());
 
   return 1;
