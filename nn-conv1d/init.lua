@@ -8,5 +8,6 @@ include('HorizontalConvolution.lua')
 include('VerticalConvolution.lua')
 include('PlanarConvolution.lua')
 include('SpatialUpSamplingPeriodic.lua')
+include('SpatialSubSamplingPeriodic.lua')
 
 return nn

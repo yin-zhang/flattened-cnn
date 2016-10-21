@@ -9,6 +9,7 @@
 #include "HorizontalConvolution.cu"
 #include "PlanarConvolution.cu"
 #include "SpatialUpSamplingPeriodic.cu"
+#include "SpatialSubSamplingPeriodic.cu"
 
 LUA_EXTERNC DLL_EXPORT int luaopen_libcunnconv1d(lua_State *L);
 
@@ -22,6 +23,7 @@ int luaopen_libcunnconv1d(lua_State *L)
   cunnconv1d_HorizontalConvolution_init(L);
   cunnconv1d_PlanarConvolution_init(L);
   cunnconv1d_SpatialUpSamplingPeriodic_init(L);
+  cunnconv1d_SpatialSubSamplingPeriodic_init(L);
 
   return 1;
 }
