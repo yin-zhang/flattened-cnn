@@ -151,7 +151,7 @@ static int cunnconv1d_HorizontalConvolution_updateOutput(lua_State *L) {
       THCudaTensor_select(state, output_n, output, 0, elt);
 
       // fill biases
-      THCudaBlas_gemm(
+      THCudaBlas_Sgemm(
          state, 't', 'n',
          outputHeight*outputWidth, nOutputPlane, 1,
          1,
@@ -323,7 +323,7 @@ static int cunnconv1d_HorizontalConvolution_accGradParameters(lua_State *L) {
       );
 
       // convolve
-      THCudaBlas_gemm(
+      THCudaBlas_Sgemm(
          state, 't', 'n',
          kL*nInputPlane, nOutputPlane, outputHeight*outputWidth,
          scale,
@@ -334,7 +334,7 @@ static int cunnconv1d_HorizontalConvolution_accGradParameters(lua_State *L) {
       );
 
       // fill biases
-      THCudaBlas_gemv(
+      THCudaBlas_Sgemv(
          state,
          't',
          outputHeight*outputWidth, nOutputPlane,
