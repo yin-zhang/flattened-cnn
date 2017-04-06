@@ -55,7 +55,9 @@ static int nnconv1d_(PlanarConvolution_updateOutput)(lua_State *L)
          for (j = 0; j < outputHeight; j++) {
             for (h = 0; h < kH; h++) {
                for (k = 0; k < kW; k++) {
-                  THVector_(adds)(output_t->storage->data + output_t->storageOffset +
+                  THVector_(cadd)(output_t->storage->data + output_t->storageOffset +
+                                 output_t->stride[0]*i + output_t->stride[1]*j,
+                                 output_t->storage->data + output_t->storageOffset +
                                  output_t->stride[0]*i + output_t->stride[1]*j,
                                  input_t->storage->data + input_t->storageOffset +
                                  input_t->stride[0]*i + input_t->stride[1]*(j+h) + k,
@@ -127,7 +129,9 @@ static int nnconv1d_(PlanarConvolution_updateGradInput)(lua_State *L)
          for (j = 0; j < outputHeight; j++) {
             for (h = 0; h < kH; h++) {
                for (k = 0; k < kW; k++) {
-                  THVector_(adds)(gradInput_t->storage->data + gradInput_t->storageOffset +
+                  THVector_(cadd)(gradInput_t->storage->data + gradInput_t->storageOffset +
+                                 gradInput_t->stride[0]*i + gradInput_t->stride[1]*(j+h) + k,
+                                 gradInput_t->storage->data + gradInput_t->storageOffset +
                                  gradInput_t->stride[0]*i + gradInput_t->stride[1]*(j+h) + k,
                                  gradOutput_t->storage->data + gradOutput_t->storageOffset +
                                  gradOutput_t->stride[0]*i + gradOutput_t->stride[1]*j,
