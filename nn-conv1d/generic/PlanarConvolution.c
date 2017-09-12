@@ -12,6 +12,8 @@ static int nnconv1d_(PlanarConvolution_updateOutput)(lua_State *L)
    int nOutputPlane = luaT_getfieldcheckint(L, 1, "nOutputPlane");
    int kW = luaT_getfieldcheckint(L, 1, "kW");
    int kH = luaT_getfieldcheckint(L, 1, "kH");
+   int dilationW = luaT_getfieldcheckint(L, 1, "dilationW");
+   int dilationH = luaT_getfieldcheckint(L, 1, "dilationH");
 
    THTensor *weight = luaT_getfieldcheckudata(L, 1, "weight", torch_Tensor);
    THTensor *bias = luaT_getfieldcheckudata(L, 1, "bias", torch_Tensor);
@@ -30,8 +32,8 @@ static int nnconv1d_(PlanarConvolution_updateOutput)(lua_State *L)
    long batchSize    = input->size[0];
    long inputHeight  = input->size[2];
    long inputWidth   = input->size[3];
-   long outputHeight = inputHeight - kH + 1;
-   long outputWidth  = inputWidth - kW + 1;
+   long outputHeight = inputHeight - (kH - 1) * dilationH;
+   long outputWidth  = inputWidth - (kW - 1) * dilationW;
 
    THTensor_(resize4d)(output, batchSize, nOutputPlane, outputHeight, outputWidth);
 
@@ -60,7 +62,7 @@ static int nnconv1d_(PlanarConvolution_updateOutput)(lua_State *L)
                                  output_t->storage->data + output_t->storageOffset +
                                  output_t->stride[0]*i + output_t->stride[1]*j,
                                  input_t->storage->data + input_t->storageOffset +
-                                 input_t->stride[0]*i + input_t->stride[1]*(j+h) + k,
+                                 input_t->stride[0]*i + input_t->stride[1]*(j+h*dilationH) + k*dilationW,
                                  *(THTensor_(data)(weight)+i*kW*kH+h*kW+k), outputWidth);
                }
             }
@@ -91,6 +93,8 @@ static int nnconv1d_(PlanarConvolution_updateGradInput)(lua_State *L)
    int nOutputPlane = luaT_getfieldcheckint(L, 1, "nOutputPlane");
    int kW = luaT_getfieldcheckint(L, 1, "kW");
    int kH = luaT_getfieldcheckint(L, 1, "kH");
+   int dilationW = luaT_getfieldcheckint(L, 1, "dilationW");
+   int dilationH = luaT_getfieldcheckint(L, 1, "dilationH");
 
    THTensor *weight = luaT_getfieldcheckudata(L, 1, "weight", torch_Tensor);
    THTensor *gradInput = luaT_getfieldcheckudata(L, 1, "gradInput", torch_Tensor);
@@ -109,8 +113,8 @@ static int nnconv1d_(PlanarConvolution_updateGradInput)(lua_State *L)
    long batchSize    = input->size[0];
    long inputHeight  = input->size[2];
    long inputWidth   = input->size[3];
-   long outputHeight = inputHeight - kH + 1;
-   long outputWidth  = inputWidth - kW + 1;
+   long outputHeight = inputHeight - (kH - 1) * dilationH;
+   long outputWidth  = inputWidth - (kW - 1) * dilationW;
 
    THTensor_(resizeAs)(gradInput, input);
    THTensor_(zero)(gradInput);
@@ -130,9 +134,9 @@ static int nnconv1d_(PlanarConvolution_updateGradInput)(lua_State *L)
             for (h = 0; h < kH; h++) {
                for (k = 0; k < kW; k++) {
                   THVector_(cadd)(gradInput_t->storage->data + gradInput_t->storageOffset +
-                                 gradInput_t->stride[0]*i + gradInput_t->stride[1]*(j+h) + k,
+                                 gradInput_t->stride[0]*i + gradInput_t->stride[1]*(j+h*dilationH) + k*dilationW,
                                  gradInput_t->storage->data + gradInput_t->storageOffset +
-                                 gradInput_t->stride[0]*i + gradInput_t->stride[1]*(j+h) + k,
+                                 gradInput_t->stride[0]*i + gradInput_t->stride[1]*(j+h*dilationH) + k*dilationW,
                                  gradOutput_t->storage->data + gradOutput_t->storageOffset +
                                  gradOutput_t->stride[0]*i + gradOutput_t->stride[1]*j,
                                  *(THTensor_(data)(weight)+i*kW*kH+h*kW+k), outputWidth);   // needs to change
@@ -166,6 +170,8 @@ static int nnconv1d_(PlanarConvolution_accGradParameters)(lua_State *L)
    int nOutputPlane = luaT_getfieldcheckint(L, 1, "nOutputPlane");
    int kW = luaT_getfieldcheckint(L, 1, "kW");
    int kH = luaT_getfieldcheckint(L, 1, "kH");
+   int dilationW = luaT_getfieldcheckint(L, 1, "dilationW");
+   int dilationH = luaT_getfieldcheckint(L, 1, "dilationH");
 
    THTensor *ones = luaT_getfieldcheckudata(L, 1, "ones", torch_Tensor);
    THTensor *gradWeight = luaT_getfieldcheckudata(L, 1, "gradWeight", torch_Tensor);
@@ -185,8 +191,8 @@ static int nnconv1d_(PlanarConvolution_accGradParameters)(lua_State *L)
    long batchSize    = input->size[0];
    long inputHeight  = input->size[2];
    long inputWidth   = input->size[3];
-   long outputHeight = inputHeight - kH + 1;
-   long outputWidth  = inputWidth - kW + 1;
+   long outputHeight = inputHeight - (kH - 1) * dilationH;
+   long outputWidth  = inputWidth - (kW - 1) * dilationW;
 
    if (ones->nDimension != 1 || ones->size[0] < outputHeight*outputWidth) {
       THTensor_(resize1d)(ones, outputHeight*outputWidth);
@@ -215,7 +221,7 @@ static int nnconv1d_(PlanarConvolution_accGradParameters)(lua_State *L)
                        i*gradOutput_t->stride[0] + j*gradOutput_t->stride[1],
                        gradOutput_t->stride[2],
                        input_t->storage->data + input_t->storageOffset +
-                       i*input_t->stride[0] + (j+h)*input_t->stride[1] + k,
+                       i*input_t->stride[0] + (j+h*dilationH)*input_t->stride[1] + k*dilationW,
                        input_t->stride[2]);
                }
             }

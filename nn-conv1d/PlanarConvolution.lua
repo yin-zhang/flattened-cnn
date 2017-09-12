@@ -1,6 +1,6 @@
 local PlanarConvolution, parent = torch.class('nn.PlanarConvolution', 'nn.Module')
 
-function PlanarConvolution:__init(nInputPlane, nOutputPlane, kW, kH)
+function PlanarConvolution:__init(nInputPlane, nOutputPlane, kW, kH, dilationW, dilationH)
    parent.__init(self)
 
    assert(nInputPlane == nOutputPlane)
@@ -9,6 +9,9 @@ function PlanarConvolution:__init(nInputPlane, nOutputPlane, kW, kH)
 
    self.kH = kH
    self.kW = kW
+
+   self.dilationH = dilationH or 1
+   self.dilationW = dilationW or 1
 
    self.weight = torch.Tensor(nInputPlane, kH, kW)
    self.bias = torch.Tensor(nOutputPlane)
