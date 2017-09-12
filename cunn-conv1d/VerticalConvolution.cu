@@ -67,7 +67,7 @@ __global__ void conv_vertical_naive_gradInput(const int n, float *dx,
    }
 }
 
-
+/*
 __global__ void conv_vertical_naive_gradParam(const int n, float *dw,
                                               const float *x, const float *dy,
                                               const int kL, const int oH, const int oW)
@@ -81,7 +81,7 @@ __global__ void conv_vertical_naive_gradParam(const int n, float *dw,
       }
    }
 }
-
+*/
 
 __global__ void conv_vertical_naive_gradWeight(const int n, float *y,
                                                const float *x, const int kL,
